@@ -1,0 +1,29 @@
+version: '3'
+services:
+  web:
+    image: "localbuild/ampache:anchore-check"
+    build:
+      context: .
+      dockerfile: Dockerfile_web
+    container_name: Ampache-3.9.0-web-app
+    ports:
+      - "8087:80"
+      - "10002:22"
+    restart: always
+    tty: true
+  config:
+    image: "localbuild/ampache-config:anchore-check"
+    build:
+      context: .
+      dockerfile: Dockerfile_config
+    container_name: Ampache-3.9.0-config-app
+    depends_on:
+      - web
+  poc:
+    image: "localbuild/ampache-poc:anchore-check"
+    build:
+      context: .
+      dockerfile: Dockerfile_poc
+    container_name: Ampache-3.9.0-poc-app
+    depends_on: 
+      - config
