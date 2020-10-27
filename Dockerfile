@@ -1,52 +1,33 @@
-FROM ubuntu:18.04
-USER root
+FROM alpine:3.9
+MAINTAINER Christoph Wiechert <wio@psitrax.de>
 
-RUN apt update \
-    && apt install apache2 -y \
-    && apt install mysql-server -y \
-    && apt install unzip -y
+ENV POWERDNS_VERSION=4.3.1 \
+    MYSQL_DEFAULT_AUTOCONF=true \
+    MYSQL_DEFAULT_HOST="mysql" \
+    MYSQL_DEFAULT_PORT="3306" \
+    MYSQL_DEFAULT_USER="root" \
+    MYSQL_DEFAULT_PASS="root" \
+    MYSQL_DEFAULT_DB="pdns"
 
-ENV DEBIAN_FRONTEND noninteractive
-RUN ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-RUN apt-get install -y tzdata \
-    && dpkg-reconfigure --frontend noninteractive tzdata \
-    && apt install php7.2 -y
+RUN apk --update add bash libpq sqlite-libs libstdc++ libgcc mariadb-client mariadb-connector-c lua-dev curl-dev && \
+    apk add --virtual build-deps \
+      g++ make mariadb-dev postgresql-dev sqlite-dev curl boost-dev mariadb-connector-c-dev && \
+    curl -sSL https://downloads.powerdns.com/releases/pdns-$POWERDNS_VERSION.tar.bz2 | tar xj -C /tmp && \
+    cd /tmp/pdns-$POWERDNS_VERSION && \
+    ./configure --prefix="" --exec-prefix=/usr --sysconfdir=/etc/pdns \
+      --with-modules="bind gmysql gpgsql gsqlite3" && \
+    make && make install-strip && cd / && \
+    mkdir -p /etc/pdns/conf.d && \
+    addgroup -S pdns 2>/dev/null && \
+    adduser -S -D -H -h /var/empty -s /bin/false -G pdns -g pdns pdns 2>/dev/null && \
+    cp /usr/lib/libboost_program_options-mt.so* /tmp && \
+    apk del --purge build-deps && \
+    mv /tmp/lib* /usr/lib/ && \
+    rm -rf /tmp/pdns-$POWERDNS_VERSION /var/cache/apk/*
 
-RUN apt install php7.2-pdo php7.2-cli php7.2-gd php7.2-xml mcrypt -y
-RUN apt install php7.2-mysql -y\
-    && apt install php7.2-curl -y
+ADD schema.sql pdns.conf /etc/pdns/
+ADD entrypoint.sh /
 
-ADD properties/ampachesql.sql /var/www/html/ampachesql.sql
-RUN service mysql start \
-    && mysql -u root -p123456 < /var/www/html/ampachesql.sql
-RUN sed -i "s/;extension=pdo_mysql/extension=pdo_mysql/g" /etc/php/7.2/cli/php.ini \
-    && sed -i "s/DirectoryIndex index.html index.cgi index.pl index.php index.xhtml index/DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index/g" /etc/apache2/mods-enabled/dir.conf
+EXPOSE 53/tcp 53/udp
 
-ADD properties/ampache-3.9.0_all.zip /var/www/html/ampache-3.9.0_all.zip
-RUN unzip -d /var/www/html/ /var/www/html/ampache-3.9.0_all.zip \
-    && chmod -R a+rw /var/www/html/config/
-
-RUN service mysql restart \
-    && service apache2 restart
-
-ADD properties/music.zip /
-RUN chmod -R 777 /media \
-    && unzip -d /media /music.zip
-
-#ADD curl.sh /var/www/html/curl.sh
-#RUN chmod +x /var/www/html/curl.sh \
-#    && bash /var/www/html/curl.sh
-
-RUN DEBIAN_FRONTEND=noninteractive \
-    && apt-get update \
-    && apt-get install -y openssh-server \
-    && apt-get clean \
-    && mkdir -p /var/run/sshd \
-    && echo 'root:thisisadminspasswordofampache390' | chpasswd \
-    && sed -i 's/#*PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config \
-    && sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd \
-    && rm -rf ROOT docs examples host-manager manager
-
-ADD properties/web.sh /
-CMD ["bash", "-c", "echo 1 && bash /web.sh"]
-
+ENTRYPOINT ["/entrypoint.sh"]

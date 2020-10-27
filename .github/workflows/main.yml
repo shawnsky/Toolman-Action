@@ -10,7 +10,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: shawnsky/test
+        repository: shawnsky/powerdns
         path: .
         tags: latest
 

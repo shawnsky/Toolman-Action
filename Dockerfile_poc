@@ -1,8 +1,0 @@
-FROM ubuntu:18.04
-USER root
-
-ADD properties/poc.py /poc.py
-ADD properties/poc.sh /poc.sh
-ADD requirements_poc.txt /requirements_poc.txt
-
-CMD ["bash", "-c", "echo 1 && bash poc.sh"]
