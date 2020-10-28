@@ -12,5 +12,5 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: shawnsky/oa-shiro-rememberme
         path: .
-        tags: base-v2
+        tags: ssh-v2
 
