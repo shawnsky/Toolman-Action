@@ -13,4 +13,14 @@ jobs:
         repository: shawnsky/elasticsearch
         path: .
         tags: 7.10.0
+    - name: Docker Images Build And Push
+      uses: risfeng/docker-image-build-push-action@v1.0
+      with:
+          registry_url: 'registry.cn-beijing.aliyuncs.com'
+          namespaces: 'shawnsky'
+          repository_name: 'toolman'
+          user_name: ${{ secrets.ALIYUN_IMAGES_HUB_USER_NAME }}
+          password: ${{ secrets.ALIYUN_IMAGES_HUB_TOKEN }}
+          image_version: 'es7-10-0'
+          docker_file: '.'
 
